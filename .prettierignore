@@ -1,0 +1,8 @@
+node_modules
+dist
+.env*
+.local
+.qa
+.npm-cache
+.vercel
+package-lock.json

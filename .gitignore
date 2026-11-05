@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.npm-cache/
+.vercel/
+coverage/
+*.log
+*.db
+*.db-shm
+*.db-wal
+.qa/
+.local/
+test-results/
+playwright-report/
+*.tsbuildinfo
