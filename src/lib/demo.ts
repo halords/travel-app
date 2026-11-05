@@ -52,8 +52,8 @@ export function demoData(): AppData {
     {
       name: 'Arashiyama Bamboo Grove',
       address: 'Sagaogurayama Tabuchiyamacho, Ukyo Ward, Kyoto, Japan',
-      latitude: 35.0094,
-      longitude: 135.6668,
+      latitude: 35.0167419,
+      longitude: 135.6711482,
       day: 1,
       time: '09:00',
       duration: 90,

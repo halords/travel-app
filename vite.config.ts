@@ -43,8 +43,8 @@ export default defineConfig({
         short_name: 'Roam',
         description:
           'A little plan, a great trip. Save places, plan your days, and get directions in one tap.',
-        theme_color: '#7060d8',
-        background_color: '#f7f8fa',
+        theme_color: '#6336dc',
+        background_color: '#f5f4fc',
         display: 'standalone',
         start_url: '/',
         scope: '/',

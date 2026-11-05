@@ -76,6 +76,7 @@ export function Settings({
   onSync,
   onInstall,
   installed,
+  initialConfirmSignOut = false,
 }: {
   onClose: () => void;
   preferences: Preferences;
@@ -91,11 +92,12 @@ export function Settings({
   onSync: () => Promise<boolean>;
   onInstall: () => void;
   installed: boolean;
+  initialConfirmSignOut?: boolean;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(initialConfirmSignOut);
   const importFile = async (file?: File) => {
     if (!file) return;
     try {
@@ -131,33 +133,7 @@ export function Settings({
       onClose={busy ? () => {} : onClose}
     >
       <div className="form-content settings-content">
-        <section className="settings-section">
-          <h3>
-            <Navigation size={18} />
-            Your maps app
-          </h3>
-          <p>Tap a place and we’ll open directions here.</p>
-          <div className="provider-options">
-            {(['google', 'apple'] as const).map((provider) => (
-              <button
-                type="button"
-                key={provider}
-                aria-pressed={preferences.mapProvider === provider}
-                className={preferences.mapProvider === provider ? 'selected' : ''}
-                onClick={() => onPreferences({ ...preferences, mapProvider: provider })}
-              >
-                <span className={`provider-symbol ${provider}`}>
-                  {provider === 'google' ? 'G' : <Navigation size={19} />}
-                </span>
-                {provider === 'google' ? 'Google Maps' : 'Apple Maps'}
-                {preferences.mapProvider === provider && <Check size={16} />}
-              </button>
-            ))}
-          </div>
-          <h4>How do you like to get around?</h4>
-          <TravelModes preferences={preferences} onChange={onPreferences} />
-        </section>
-        <section className="settings-section">
+        <section className="settings-section account-settings">
           <h3>
             <Cloud size={18} />
             Your account
@@ -207,7 +183,7 @@ export function Settings({
                 )}
                 <button
                   type="button"
-                  className="text-button"
+                  className="button signout-button"
                   disabled={busy}
                   onClick={() => setConfirmSignOut(true)}
                 >
@@ -250,6 +226,32 @@ export function Settings({
               </button>
             </>
           )}
+        </section>
+        <section className="settings-section maps-settings">
+          <h3>
+            <Navigation size={18} />
+            Your maps app
+          </h3>
+          <p>Tap a place and we’ll open directions here.</p>
+          <div className="provider-options">
+            {(['google', 'apple'] as const).map((provider) => (
+              <button
+                type="button"
+                key={provider}
+                aria-pressed={preferences.mapProvider === provider}
+                className={preferences.mapProvider === provider ? 'selected' : ''}
+                onClick={() => onPreferences({ ...preferences, mapProvider: provider })}
+              >
+                <span className={`provider-symbol ${provider}`}>
+                  {provider === 'google' ? 'G' : <Navigation size={19} />}
+                </span>
+                {provider === 'google' ? 'Google Maps' : 'Apple Maps'}
+                {preferences.mapProvider === provider && <Check size={16} />}
+              </button>
+            ))}
+          </div>
+          <h4>How do you like to get around?</h4>
+          <TravelModes preferences={preferences} onChange={onPreferences} />
         </section>
         <section className="settings-section">
           <h3>

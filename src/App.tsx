@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   Leaf,
   LoaderCircle,
+  LogOut,
   MapPin,
   MapPinned,
   Navigation,
@@ -53,13 +54,13 @@ import {
   type TripInput,
 } from './lib/model';
 import { readPreferences, writePreferences } from './lib/storage';
-import { dayRoutes } from './lib/day-overview';
 import { TripForm } from './components/TripForm';
 import { PlaceForm } from './components/PlaceForm';
 import { PlaceCard } from './components/PlaceCard';
 import { AuthForm } from './components/AuthForm';
 import { Settings, TravelModes, exportBackup, exportRawBackup } from './components/Settings';
 import { DayOverview } from './components/DayOverview';
+import { destinationPhoto } from './lib/destination-photos';
 import { Modal } from './components/Modal';
 
 type View = 'itinerary' | 'trips' | 'saved';
@@ -68,6 +69,7 @@ type OpenModal =
   | { type: 'place'; trip: Trip; place?: Place; date: string | null }
   | { type: 'auth' }
   | { type: 'settings' }
+  | { type: 'signout' }
   | { type: 'install' }
   | { type: 'delete-trip'; trip: Trip }
   | { type: 'delete-place'; place: Place }
@@ -75,7 +77,6 @@ type OpenModal =
   | null;
 const isLater = (place: Place, trip: Trip) =>
   !place.date || place.date < trip.startDate || place.date > trip.endDate;
-const hasKyotoPhoto = (trip: Trip) => /kyoto/i.test(trip.destination);
 
 function Brand() {
   return (
@@ -96,6 +97,7 @@ export default function App() {
     () => activeTrips(workspace.data)[0]?.id ?? null,
   );
   const trip = trips.find((t) => t.id === selectedTripId) ?? trips[0];
+  const photo = destinationPhoto(trip?.destination ?? '');
   const [view, setView] = useState<View>(() => (trips.length ? 'itinerary' : 'trips'));
   const [selectedDay, setSelectedDay] = useState<string>(() => trip?.startDate ?? 'all');
   const [modal, setModal] = useState<OpenModal>(null);
@@ -250,26 +252,7 @@ export default function App() {
     );
   };
   const overviewButton = (group: Place[], date: string) => {
-    const routes = dayRoutes(group, preferences.travelMode);
-    if (!routes.length) return null;
-    if (
-      routes.length === 1 &&
-      routes[0].url &&
-      !(preferences.travelMode === 'transit' && group.length > 2)
-    )
-      return (
-        <a
-          href={routes[0].url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="day-overview-button"
-          aria-label={`View ${formatDate(date)} overview in Google Maps`}
-        >
-          <MapPinned size={15} />
-          <span>Day overview</span>
-          <ArrowUpRight size={14} />
-        </a>
-      );
+    if (!group.length) return null;
     return (
       <button
         type="button"
@@ -325,48 +308,50 @@ export default function App() {
             {savedPlaces.length > 0 && <span className="nav-count">{savedPlaces.length}</span>}
           </button>
         </nav>
-        <div className="sidebar-divider" />
-        <div className="sidebar-label">
-          <span>YOUR TRIPS</span>
+        <div className="sidebar-trip-section">
+          <div className="sidebar-divider" />
+          <div className="sidebar-label">
+            <span>YOUR TRIPS</span>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="Create a new trip"
+              onClick={() => setModal({ type: 'trip' })}
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+          <div className="sidebar-trips">
+            {trips.map((t) => (
+              <button
+                type="button"
+                key={t.id}
+                className={`sidebar-trip ${view === 'itinerary' && trip?.id === t.id ? 'selected' : ''}`}
+                aria-current={view === 'itinerary' && trip?.id === t.id ? 'page' : undefined}
+                onClick={() => selectTrip(t)}
+              >
+                <span className={`trip-mini-icon cover-${t.cover}`}>
+                  <Plane size={17} />
+                </span>
+                <span>
+                  <strong title={t.title}>{t.title}</strong>
+                  <small>
+                    {formatDate(t.startDate)} – {formatDate(t.endDate)}
+                  </small>
+                </span>
+                {view === 'itinerary' && trip?.id === t.id && <span className="selected-dot" />}
+              </button>
+            ))}
+          </div>
           <button
-            className="icon-button"
             type="button"
-            aria-label="Create a new trip"
+            className="new-trip-button"
             onClick={() => setModal({ type: 'trip' })}
           >
             <Plus size={16} />
+            Plan a new trip
           </button>
         </div>
-        <div className="sidebar-trips">
-          {trips.slice(0, 5).map((t) => (
-            <button
-              type="button"
-              key={t.id}
-              className={`sidebar-trip ${view === 'itinerary' && trip?.id === t.id ? 'selected' : ''}`}
-              aria-current={view === 'itinerary' && trip?.id === t.id ? 'page' : undefined}
-              onClick={() => selectTrip(t)}
-            >
-              <span className={`trip-mini-icon cover-${t.cover}`}>
-                <Plane size={17} />
-              </span>
-              <span>
-                <strong>{t.title}</strong>
-                <small>
-                  {formatDate(t.startDate)} – {formatDate(t.endDate)}
-                </small>
-              </span>
-              {view === 'itinerary' && trip?.id === t.id && <span className="selected-dot" />}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          className="new-trip-button"
-          onClick={() => setModal({ type: 'trip' })}
-        >
-          <Plus size={16} />
-          Plan a new trip
-        </button>
         <div className="sidebar-bottom">
           {!install.installed && (
             <div className="install-card">
@@ -390,6 +375,16 @@ export default function App() {
             <Settings2 size={18} />
             Settings & account
           </button>
+          {workspace.user && (
+            <button
+              type="button"
+              className="sidebar-signout"
+              onClick={() => setModal({ type: 'signout' })}
+            >
+              <LogOut size={17} />
+              Sign out
+            </button>
+          )}
           <span className="sidebar-footer">
             Less scrolling. More exploring.
             <Leaf size={12} />
@@ -433,7 +428,11 @@ export default function App() {
               onClick={() => setModal({ type: workspace.authenticated ? 'settings' : 'auth' })}
             >
               {workspace.authenticated && workspace.user ? (
-                <span className="avatar">{workspace.user.name.slice(0, 1).toUpperCase()}</span>
+                <>
+                  <span className="avatar">{workspace.user.name.slice(0, 1).toUpperCase()}</span>
+                  <span className="account-name">{workspace.user.name}</span>
+                  <Settings2 size={15} />
+                </>
               ) : (
                 <>
                   <UserRound size={17} />
@@ -477,15 +476,11 @@ export default function App() {
           {view === 'itinerary' && trip ? (
             <>
               <section
-                className={`trip-hero cover-${trip.cover} ${hasKyotoPhoto(trip) ? 'photo-hero' : ''}`}
+                className={`trip-hero cover-${trip.cover} ${photo ? 'photo-hero' : ''}`}
                 aria-label="Trip details"
               >
-                {hasKyotoPhoto(trip) ? (
-                  <img
-                    className="hero-photo"
-                    src="/images/kyoto.jpg"
-                    alt="Yasaka Pagoda above the traditional streets of Kyoto"
-                  />
+                {photo ? (
+                  <img className="hero-photo" src={photo.src} alt={photo.alt} />
                 ) : (
                   <div className="hero-illustration" aria-hidden="true">
                     <div className="orbit orbit-one" />
@@ -498,6 +493,16 @@ export default function App() {
                   </div>
                 )}
                 <div className="hero-shade" />
+                {photo && (
+                  <a
+                    className="hero-photo-credit"
+                    href={photo.source}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {photo.region} inspiration · Unsplash
+                  </a>
+                )}
                 <div className="hero-actions">
                   {trip.isDemo && <span className="sample-badge">Sample trip</span>}
                   <button
@@ -844,8 +849,12 @@ export default function App() {
                       onClick={() => selectTrip(t)}
                     >
                       <div className={`trip-card-art cover-${t.cover}`}>
-                        {hasKyotoPhoto(t) ? (
-                          <img src="/images/kyoto.jpg" alt="The traditional streets of Kyoto" />
+                        {destinationPhoto(t.destination) ? (
+                          <img
+                            src={destinationPhoto(t.destination)!.src}
+                            alt={destinationPhoto(t.destination)!.alt}
+                            loading="lazy"
+                          />
                         ) : (
                           <>
                             <Plane size={43} strokeWidth={1.2} />
@@ -1002,7 +1011,7 @@ export default function App() {
           }}
         />
       )}
-      {modal?.type === 'settings' && (
+      {(modal?.type === 'settings' || modal?.type === 'signout') && (
         <Settings
           onClose={() => setModal(null)}
           preferences={preferences}
@@ -1018,6 +1027,7 @@ export default function App() {
           }}
           onSignIn={() => setModal({ type: 'auth' })}
           onSignOut={workspace.signOut}
+          initialConfirmSignOut={modal.type === 'signout'}
           onSync={workspace.synchronize}
           onInstall={() => void openInstall()}
           installed={install.installed}

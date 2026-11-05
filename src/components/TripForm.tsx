@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { ArrowRight, CalendarDays, MapPin } from 'lucide-react';
 import { addDays, covers, dayDifference, today, type Trip, type TripInput } from '../lib/model';
 import { Modal } from './Modal';
+import { destinationPhoto } from '../lib/destination-photos';
 
 export function TripForm({
   trip,
@@ -23,6 +24,7 @@ export function TripForm({
     notes: trip?.notes ?? '',
   }));
   const [error, setError] = useState('');
+  const photo = destinationPhoto(form.destination);
   const update = <K extends keyof TripInput>(key: K, value: TripInput[K]) =>
     setForm((previous) => ({ ...previous, [key]: value }));
   const submit = (event: FormEvent) => {
@@ -68,6 +70,12 @@ export function TripForm({
             />
           </div>
         </label>
+        {photo && (
+          <figure className="suggested-banner">
+            <img src={photo.src} alt={photo.alt} />
+            <figcaption>Suggested banner · {photo.region}</figcaption>
+          </figure>
+        )}
         <div className="form-row">
           <label className="field">
             Start date

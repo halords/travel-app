@@ -8,12 +8,14 @@ A mobile travel PWA. Plan a trip, add places to each day, and open directions wi
 - Search for places, enter an address, or adjust an exact destination pin in the place editor.
 - Schedule stops by day and time, reorder them, save places for later, and mark visits complete.
 - Tap a place name or **Directions** to open Google Maps or Apple Maps with the destination filled in. Choose walking, driving, or transit. The operating system opens the installed maps app when supported, with a web fallback.
-- Open **Day overview** to see a specific day’s stops together in Google Maps, in itinerary order. Long days are divided into overlapping sections of up to five places, respecting the mobile Maps URL limit. Multiple transit stops use a driving overview; individual transit directions remain available.
+- Open **Day overview** to see every destination for the chosen day on a numbered map and in a complete list. The map fits all saved pins; address-only stops remain in the list with a **Set map pin** action. Google Maps directions are available in overlapping sections of up to five places, plus individual place links for Maps products that ignore waypoints. Multiple transit stops use a driving overview; individual transit directions remain available.
+- Get an automatic photo banner and a live preview when entering a supported destination: Japan, the Philippines, France, Italy, South Korea, Singapore, or Thailand, including major cities and regions. Photos are representative country inspiration. Other destinations keep the chosen color cover.
+- Browse every trip in the scrolling desktop sidebar. Open **Sign out** there, or use the account button and the account section at the top of Settings.
 - Sign up and sign in with email and password. Personal trips sync through Turso.
 - Keep reading and editing your saved itinerary offline. Sync resumes after reconnecting.
 - Install on a phone or desktop and export/restore JSON backups.
 
-There is no embedded navigation view. The in-app map is only used to select or check a destination. Google Maps links do not require a Google API key. Place search uses Photon and the destination picker uses OpenStreetMap tiles.
+The in-app maps select destination pins and show daily destinations. Turn-by-turn navigation opens Google Maps or Apple Maps. Google Maps links do not require a Google API key. Place search uses Photon; destination and day-overview maps use OpenStreetMap tiles. Missing map tiles never remove itinerary records or prevent individual directions.
 
 ## Run locally
 
@@ -108,4 +110,4 @@ tests/                 Data, API, and workspace tests
 scripts/               Database setup and icon generation
 ```
 
-Built with React, TypeScript, Vite, Leaflet, vite-plugin-pwa, and the Turso/libSQL client. The Kyoto photograph is from [Unsplash](https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e) and is bundled for offline use. The interface uses DM Sans and Lucide icons. Map attribution is visible in the destination picker.
+Built with React, TypeScript, Vite, Leaflet, vite-plugin-pwa, and the Turso/libSQL client. Destination photography is from Unsplash and is bundled for offline use. Each banner links to its source; source URLs and destination matches are in `src/lib/destination-photos.ts`. The interface uses DM Sans and Lucide icons. OpenStreetMap attribution is visible on each map.

@@ -4,7 +4,13 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../src/App';
 import { readData, writeData, writePreferences } from '../src/lib/storage';
-import { emptyData, GOOGLE_MAPS_URL_LIMIT, savePlace, saveTrip } from '../src/lib/model';
+import {
+  emptyData,
+  GOOGLE_MAPS_URL_LIMIT,
+  savePlace,
+  saveTrip,
+  tripPlaces,
+} from '../src/lib/model';
 import * as placeSearch from '../src/lib/search';
 
 vi.mock('../src/components/PlacePickerMap', () => ({
@@ -14,6 +20,16 @@ vi.mock('../src/components/PlacePickerMap', () => ({
       { type: 'button', onClick: () => onPick(10.293, 123.902) },
       'Choose test destination',
     ),
+}));
+
+vi.mock('../src/components/DayOverviewMap', () => ({
+  default: ({ places }: { places: import('../src/lib/model').Place[] }) =>
+    createElement('div', {
+      'aria-label': 'Map of all pinned destinations for this day',
+      'data-places': JSON.stringify(
+        places.map(({ id, latitude, longitude }) => ({ id, latitude, longitude })),
+      ),
+    }),
 }));
 
 beforeEach(() => {
@@ -89,6 +105,72 @@ function tripFixture(count = 1) {
 }
 
 describe('the trip planning interface', () => {
+  it('updates the suggested and saved banner when the destination changes', async () => {
+    render(createElement(App));
+    await settle();
+    createTrip();
+    expect(screen.getByRole('img', { name: /Turquoise water/ }).getAttribute('src')).toBe(
+      '/images/philippines.jpg',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Edit trip details' }));
+    change('Destination', 'Japan');
+    const editor = within(screen.getByRole('dialog'));
+    expect(editor.getByText('Suggested banner · Japan')).toBeTruthy();
+    expect(editor.getByRole('img', { name: /Japanese streets/ }).getAttribute('src')).toBe(
+      '/images/kyoto.jpg',
+    );
+    fireEvent.click(editor.getByRole('button', { name: 'Save changes' }));
+    expect(screen.getByRole('img', { name: /Japanese streets/ }).getAttribute('src')).toBe(
+      '/images/kyoto.jpg',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Edit trip details' }));
+    change('Destination', 'An unlisted destination');
+    expect(within(screen.getByRole('dialog')).queryByText(/Suggested banner/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(screen.queryByRole('img', { name: /Japanese streets/ })).toBeNull();
+  });
+  it('shows every destination and exact map coordinate across a multi-part day overview', async () => {
+    let data = tripFixture();
+    for (let i = 0; i < 7; i++)
+      data = savePlace(data, {
+        tripId: data.trips[0].id,
+        name: `Pinned stop ${i + 1}`,
+        address: `Address ${i + 1}`,
+        latitude: 35 + i / 1000,
+        longitude: 135.7,
+        date: i === 6 ? '2026-12-02' : '2026-12-01',
+        time: '09:00',
+        duration: 60,
+        category: 'sightseeing',
+        notes: '',
+      });
+    writeData(data);
+    render(createElement(App));
+    await settle();
+    fireEvent.click(screen.getByRole('button', { name: 'Day overview' }));
+    await settle();
+    const overview = within(screen.getByRole('dialog'));
+    const destinations = within(
+      overview.getByRole('list', { name: 'Every destination for this day' }),
+    );
+    expect(destinations.getAllByRole('listitem')).toHaveLength(6);
+    expect(overview.queryByText('Pinned stop 7')).toBeNull();
+    const points = JSON.parse(
+      overview
+        .getByLabelText('Map of all pinned destinations for this day')
+        .getAttribute('data-places')!,
+    );
+    expect(points).toEqual(
+      tripPlaces(data, data.trips[0].id)
+        .slice(0, 6)
+        .map(({ id, latitude, longitude }) => ({ id, latitude, longitude })),
+    );
+    expect(overview.getAllByRole('link', { name: /Open part/ })).toHaveLength(2);
+    for (let i = 1; i <= 6; i++)
+      expect(
+        destinations.getByRole('link', { name: `View Pinned stop ${i} in Google Maps` }),
+      ).toBeTruthy();
+  });
   it('creates a dated trip and places with working one-tap directions and a day overview', async () => {
     render(createElement(App));
     await settle();
@@ -106,8 +188,9 @@ describe('the trip planning interface', () => {
       'Fort San Pedro, A. Pigafetta Street, Cebu City, Philippines',
     );
     expect(directions.target).toBe('_blank');
-    const overview = screen.getByRole('link', {
-      name: /overview in Google Maps/,
+    fireEvent.click(screen.getByRole('button', { name: 'Day overview' }));
+    const overview = within(screen.getByRole('dialog')).getByRole('link', {
+      name: 'Open in Google Maps',
     }) as HTMLAnchorElement;
     const params = new URL(overview.href).searchParams;
     expect(params.get('origin')).toContain('Fort San Pedro');
@@ -147,8 +230,9 @@ describe('the trip planning interface', () => {
       name: 'Directions to Fort San Pedro',
     }) as HTMLAnchorElement;
     expect(new URL(directions.href).hostname).toBe('maps.apple.com');
-    const overview = screen.getByRole('link', {
-      name: /overview in Google Maps/,
+    fireEvent.click(screen.getByRole('button', { name: 'Day overview' }));
+    const overview = within(screen.getByRole('dialog')).getByRole('link', {
+      name: 'Open in Google Maps',
     }) as HTMLAnchorElement;
     expect(new URL(overview.href).hostname).toBe('www.google.com');
   });

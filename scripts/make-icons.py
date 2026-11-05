@@ -6,11 +6,11 @@ root.mkdir(parents=True, exist_ok=True)
 
 def icon(size, filename, maskable=False):
     scale = 3
-    canvas = Image.new('RGB' if maskable else 'RGBA', (size * scale, size * scale), '#7060d8' if maskable else (0, 0, 0, 0))
+    canvas = Image.new('RGB' if maskable else 'RGBA', (size * scale, size * scale), '#6336dc' if maskable else (0, 0, 0, 0))
     draw = ImageDraw.Draw(canvas)
     side = size * scale
     if not maskable:
-        draw.rounded_rectangle((0, 0, side - 1, side - 1), radius=side * .26, fill='#7060d8')
+        draw.rounded_rectangle((0, 0, side - 1, side - 1), radius=side * .26, fill='#6336dc')
     def point(x, y): return (int(x * side), int(y * side))
     draw.polygon([point(.29, .68), point(.455, .315), point(.485, .29), point(.515, .29), point(.545, .315), point(.73, .68), point(.505, .57)], fill='white')
     draw.line([point(.505, .43), point(.505, .565)], fill='#d9d2ff', width=max(1, int(side * .035)))

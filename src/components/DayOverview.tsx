@@ -1,7 +1,19 @@
+import { lazy, Suspense } from 'react';
 import { ArrowUpRight, MapPin, MapPinned, Navigation } from 'lucide-react';
 import { dayRoutes } from '../lib/day-overview';
-import { formatDate, mapLinkError, type Place, type TravelMode } from '../lib/model';
+import {
+  formatDate,
+  formatTime,
+  GOOGLE_MAPS_URL_LIMIT,
+  mapDestination,
+  mapLinkError,
+  type Place,
+  type TravelMode,
+} from '../lib/model';
+import { overviewPoints } from '../lib/overview-map';
 import { Modal } from './Modal';
+
+const DayOverviewMap = lazy(() => import('./DayOverviewMap'));
 
 export function DayOverview({
   places,
@@ -17,6 +29,7 @@ export function DayOverview({
   onEditPlace: (place: Place) => void;
 }) {
   const routes = dayRoutes(places, mode);
+  const pinned = overviewPoints(places).length;
   const connected = routes.every(
     (route, index) => index === 0 || route.from === routes[index - 1].to,
   );
@@ -25,12 +38,74 @@ export function DayOverview({
       title="Your day, at a glance"
       subtitle={formatDate(date, { weekday: 'long', month: 'long', day: 'numeric' })}
       onClose={onClose}
+      wide
     >
       <div className="form-content">
         <div className="overview-intro">
           <MapPinned size={26} />
-          <p>Open your destinations in Google Maps, in the order you’ve planned them.</p>
+          <p>
+            <strong>
+              {places.length} {places.length === 1 ? 'destination' : 'destinations'} for this day.
+            </strong>{' '}
+            See every stop here, then open directions in Google Maps.
+          </p>
         </div>
+        {pinned > 0 && (
+          <Suspense fallback={<p className="picker-loading">Loading your destinations…</p>}>
+            <DayOverviewMap places={places} />
+          </Suspense>
+        )}
+        {pinned < places.length && (
+          <p className="notice">
+            {pinned} of {places.length} destinations have exact map pins. Address-only stops are
+            listed below; set their location to show them on this map.
+          </p>
+        )}
+        <ol className="overview-destinations" aria-label="Every destination for this day">
+          {places.map((place, index) => {
+            const url = `https://www.google.com/maps/search/?${new URLSearchParams({ api: '1', query: mapDestination(place) })}`;
+            return (
+              <li key={place.id}>
+                <span className="overview-stop-number">{index + 1}</span>
+                <div>
+                  <strong>{place.name}</strong>
+                  <p>{place.address}</p>
+                  <small>
+                    {formatTime(place.time)}
+                    {place.visited ? ' · Visited' : ''}
+                  </small>
+                  {place.latitude === null && (
+                    <button
+                      className="text-button"
+                      type="button"
+                      onClick={() => onEditPlace(place)}
+                      aria-label={`Set map pin for ${place.name}`}
+                    >
+                      Set map pin
+                    </button>
+                  )}
+                </div>
+                {url.length <= GOOGLE_MAPS_URL_LIMIT && (
+                  <a
+                    className="day-overview-button"
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`View ${place.name} in Google Maps`}
+                  >
+                    <MapPin size={15} />
+                    <span>View place</span>
+                  </a>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        <h3 className="overview-routes-title">Directions for the day</h3>
+        <p className="overview-map-help">
+          Some Google Maps apps skip intermediate stops. Check the stops before starting; use the
+          individual place links above if needed.
+        </p>
         {routes.length > 1 && (
           <p className="notice">
             Google Maps links fit up to 5 places on phones. Long addresses may need smaller sections
